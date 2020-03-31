@@ -49,7 +49,7 @@ def top_view(request):
                 .get(id=stonk.id)
             )
             bump_stonk(stonk)
-    
+
     stonks = Stonk.objects.filter(value__lt=25000)
     for stonk in stonks:
         with transaction.atomic():
@@ -59,6 +59,11 @@ def top_view(request):
                 .get(id=stonk.id)
             )
             hump_stonk(stonk)
+
+    result = ''
+    for stonk in Stonk.objects.order_by('-score')[:10]:
+        result += f'{stonk.name} = {stonk.value} (score {stonk.score})<br/>'
+    return HttpResponse(result)
 
 
 def fluctuate_stonk(stonk):
