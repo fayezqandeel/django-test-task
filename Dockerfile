@@ -6,7 +6,7 @@ RUN mkdir /code
 WORKDIR /code
 
 RUN apt-get update
-RUN apt-get install python3-dev default-libmysqlclient-dev -y
+RUN apt-get install python3-dev libmysqlclient-dev -y
 
 ADD requirements.txt /code/
 RUN pip3 install -r requirements.txt

@@ -26,25 +26,39 @@ def index_view(request):
     ''')
 
 
-@transaction.atomic
 def refresh_view(request):
-    for stonk in Stonk.objects.all():
-        fluctuate_stonk(stonk)
+    stonks = Stonk.objects.all()
+    for stonk in stonks:
+        with transaction.atomic():
+            stonk = (
+                stonks
+                .select_for_update()
+                .get(id=stonk.id)
+            )
+            fluctuate_stonk(stonk)
     return HttpResponse('Stonks fluctuated')
 
 
-@transaction.atomic
 def top_view(request):
-    for stonk in Stonk.objects.filter(value__gt=25000):
-        bump_stonk(stonk)
-
-    for stonk in Stonk.objects.filter(value__lt=25000):
-        hump_stonk(stonk)
-
-    result = ''
-    for stonk in Stonk.objects.order_by('-score')[:10]:
-        result += f'{stonk.name} = {stonk.value} (score {stonk.score})<br/>'
-    return HttpResponse(result)
+    stonks = Stonk.objects.filter(value__gt=25000)
+    for stonk in stonks:
+        with transaction.atomic():
+            stonk = (
+                stonks
+                .select_for_update()
+                .get(id=stonk.id)
+            )
+            bump_stonk(stonk)
+    
+    stonks = Stonk.objects.filter(value__lt=25000)
+    for stonk in stonks:
+        with transaction.atomic():
+            stonk = (
+                stonks
+                .select_for_update()
+                .get(id=stonk.id)
+            )
+            hump_stonk(stonk)
 
 
 def fluctuate_stonk(stonk):
