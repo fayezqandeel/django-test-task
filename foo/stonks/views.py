@@ -26,44 +26,43 @@ def index_view(request):
     ''')
 
 
-def refresh_view(request):
-    stonks = Stonk.objects.all()
-    for stonk in stonks:
-        with transaction.atomic():
-            stonk = (
-                stonks
-                .select_for_update()
-                .get(id=stonk.id)
-            )
-            fluctuate_stonk(stonk)
+def prepare_queryset(queryset, callback):
+    def inner_decorator(f):
+        def wrapped(*args, **kwargs):
+            for stonk in queryset:
+                kwargs['stonk'] = stonk
+                f(*args, **kwargs)
+            return callback()
+        return wrapped
+    return inner_decorator 
+
+
+def refresh_view_callback():
     return HttpResponse('Stonks fluctuated')
 
 
-def top_view(request):
-    stonks = Stonk.objects.filter(value__gt=25000)
-    for stonk in stonks:
-        with transaction.atomic():
-            stonk = (
-                stonks
-                .select_for_update()
-                .get(id=stonk.id)
-            )
-            bump_stonk(stonk)
+@prepare_queryset(Stonk.objects.all(), refresh_view_callback)
+@transaction.atomic()
+def refresh_view(request, stonk):
+    fluctuate_stonk(stonk)
 
-    stonks = Stonk.objects.filter(value__lt=25000)
-    for stonk in stonks:
-        with transaction.atomic():
-            stonk = (
-                stonks
-                .select_for_update()
-                .get(id=stonk.id)
-            )
-            hump_stonk(stonk)
 
+def top_view_callback():
     result = ''
     for stonk in Stonk.objects.order_by('-score')[:10]:
         result += f'{stonk.name} = {stonk.value} (score {stonk.score})<br/>'
     return HttpResponse(result)
+
+
+@prepare_queryset(Stonk.objects.all(), top_view_callback)
+@transaction.atomic(savepoint=False)
+def top_view(request, stonk):
+
+    if stonk.value > 250000:
+        bump_stonk(stonk)
+    
+    if stonk.value < 250000:
+        hump_stonk(stonk)
 
 
 def fluctuate_stonk(stonk):
