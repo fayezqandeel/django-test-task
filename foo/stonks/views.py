@@ -58,10 +58,10 @@ def top_view_callback():
 @transaction.atomic(savepoint=False)
 def top_view(request, stonk):
 
-    if stonk.value > 250000:
+    if stonk.value > 25000:
         bump_stonk(stonk)
     
-    if stonk.value < 250000:
+    if stonk.value < 25000:
         hump_stonk(stonk)
 
 
